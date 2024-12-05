@@ -5,22 +5,27 @@
 #include <GLFW/glfw3.h>
 
 #include <iostream>
+#include "shader.h"
 
 //функция обратного вызова, вызываеться при каждом изменении окна
 void framebuffer_size_callback(GLFWwindow* window, int width, int height); 
 
 const char* vertexShaderSource = "#version 330 core\n"
 "layout (location = 0) in vec3 aPos;\n"
+"layout (location = 1) in vec3 aColor;\n"
+"out vec3 ourColor;\n"
 "void main()\n"
 "{\n"
-"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+"   gl_Position = vec4(aPos, 1.0);\n"
+"   ourColor = aColor;\n"
 "}\0";
 
 const char* fragmentShaderSource = "#version 330 core\n"
 "out vec4 FragColor;\n"
+"in vec3 ourColor;\n"
 "void main()\n"
 "{\n"
-"   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
+"    FragColor = vec4(ourColor, 1.0);\n"
 "}\0";
 
 const char* fragmentShaderSource_yellow = "#version 330 core\n"
@@ -67,109 +72,23 @@ int main()
     //окно просмотра (видимая область окна)
     glViewport(0, 0, 800, 600);
 
-                              // Компилирование шейдерной программы
-    
-    //Создание объекта шейдера
-    unsigned int vertexShader;
-    vertexShader = glCreateShader(GL_VERTEX_SHADER);
-
-    /*glShaderSource():
-      Аргумент №1 : Объект шейдера для компиляции.
-      Аргумент №2 : Количество строк, которые мы передаем в качестве исходного кода(в нашем случае — это одна строка).
-      Аргумент №3 : Фактический исходный код вершинного шейдера.
-      Аргумент №4 : Этот аргумент мы оставляем равным NULL.*/
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-    glCompileShader(vertexShader);
-
-    //Проверка на ошибки
-    int  success;
-    char infoLog[512];
-    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-    
-    //Сначала мы определяем целое число для обозначения успешного исхода компиляции и контейнер для хранения сообщений об ошибках(если таковые имеются).
-    // Затем, с помощью функции glGetShaderiv(), мы проверяем, была ли компиляция успешной.
-    // Если компиляция не удалась, то мы должны извлечь сообщение об ошибке, используя функцию glGetShaderInfoLog(), и вывести его на экран :
-    if (!success)
-    {
-        glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-
-    //компиляции фрагментного шейдера
-    unsigned int fragmentShader;
-    fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-    glCompileShader(fragmentShader);
-
-    // Проверка на наличие ошибок компилирования фрагментного шейдера
-    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-
-    unsigned int fragmentShader_yellow;
-    fragmentShader_yellow = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader_yellow, 1, &fragmentShaderSource_yellow, NULL);
-    glCompileShader(fragmentShader_yellow);
-
-    // Проверка на наличие ошибок компилирования фрагментного шейдера
-    glGetShaderiv(fragmentShader_yellow, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        glGetShaderInfoLog(fragmentShader_yellow, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-
-    //Функция glCreateProgram() создает программу и возвращает идентификатор ссылки на вновь созданный объект шейдерной программы
-    unsigned int shaderProgram;
-    shaderProgram = glCreateProgram();
-
-    //прикрепляем шейдеры к шейдерской программе и связываем их с помощью  glLinkProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
-
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-    if (!success) {
-        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);  
-        std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
-    }
-    //glUseProgram(shaderProgram);
-
-    unsigned int shaderProgram_yellow;
-    shaderProgram_yellow = glCreateProgram();
-
-    glAttachShader(shaderProgram_yellow, vertexShader);
-    glAttachShader(shaderProgram_yellow, fragmentShader_yellow);
-    glLinkProgram(shaderProgram_yellow);
-
-    glGetProgramiv(shaderProgram_yellow, GL_LINK_STATUS, &success);
-    if (!success) {
-        glGetProgramInfoLog(shaderProgram_yellow, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
-    }
-
-    //удаление шейдерских объектов после связывания 
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-    glDeleteShader(fragmentShader_yellow);
+    // Компилирование нашей шейдерной программы
+    Shader ourShader("vertex_shader.glsl", "fragment_shader.glsl");  // путь к файлам шейдеров
 
                              //Указывание вершин (и буферов) и настройка вершинных атрибутов            
 
     //координаты вершин треугольника по xyz
     float vertices1[] = {
-     0.1f,  0.5f, 0.0f,  // верхняя правая 0
-     0.1f, -0.5f, 0.0f,  // нижняя правая  1
-     0.5f,  0.0f, 0.0f,  // правая         2 
+     0.1f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  // верхняя правая 0
+     0.1f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,  // нижняя правая  1
+     0.5f,  0.0f, 0.0f,  1.0f, 0.0f, 0.0f   // правая         2 
     };
 
     //координаты вершин треугольника по xyz
     float vertices2[] = { 
-    -0.1f, -0.5f, 0.0f,  // нижняя левая   3
-    -0.1f,  0.5f, 0.0f,  // верхняя левая  4
-    -0.5f,  0.0f, 0.0f   //левая           5 
+    -0.1f, -0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  // нижняя левая   3
+    -0.1f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f,  // верхняя левая  4
+    -0.5f,  0.0f, 0.0f,  0.0f, 0.0f, 1.0f   //левая           5 
     };
 
     //unsigned int indices[] = {  // помните, что мы начинаем с 0!
@@ -207,8 +126,13 @@ int main()
     // glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
     //glVertexAttribPointer()- мы сообщаем OpenGL, как он должен интерпретировать данные вершин (для каждого атрибута вершины)
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    //Координатные атрибуты
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+
+    // Цветовые атрибуты
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
 
     // Обратите внимание, что данное действие разрешено, вызов glVertexAttribPointer() зарегистрировал VBO как привязанный вершинный буферный объект
     // для вершинного атрибута, так что после этого мы можем спокойно выполнить отвязку
@@ -222,12 +146,12 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, VBO1);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices2), vertices2, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 
     // Раскомментируйте следующую строку для отрисовки полигонов в режиме каркаса
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -244,15 +168,13 @@ int main()
         //функция glClear() использует текущие настройки цвета, установленные при помощи функции glClearColor().
         glClearColor(0.5f, 0.2f, 0.5f, 0.7f);
         glClear(GL_COLOR_BUFFER_BIT);       
-
-        // Рисуем наш первый треугольник
-        glUseProgram(shaderProgram);
-        glBindVertexArray(VAO); // поскольку у нас есть только один VAO, то нет необходимости связывать его каждый раз (но мы сделаем это, чтобы всё было немного организованнее)
+           
+        ourShader.use();
+        glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, 3); //треугольник
         // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0); //квадрат
         // glBindVertexArray(0); // не нужно каждый раз его отвязывать
 
-        glUseProgram(shaderProgram_yellow);
         glBindVertexArray(VAO1);
         glDrawArrays(GL_TRIANGLES, 0, 3);
 
@@ -264,6 +186,9 @@ int main()
     // Опционально: освобождаем все ресурсы, как только они выполнили свое предназначение
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
+
+    glDeleteVertexArrays(1, &VAO1);
+    glDeleteBuffers(1, &VBO1);
 
     //Очистка выделенных ресурсов 
     glfwTerminate(); 

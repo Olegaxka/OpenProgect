@@ -22,6 +22,10 @@
   <ItemGroup>
     <None Include="vertex_shader.glsl" />
     <None Include="fragment_shader.glsl" />
-    <None Include="fragment_shader_yellow.glsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="shader.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
